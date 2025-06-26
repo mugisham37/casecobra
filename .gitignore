@@ -177,3 +177,5 @@ storybook-static/
 
 # Husky
 .husky/_
+
+/generated/prisma
