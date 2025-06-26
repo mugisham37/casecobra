@@ -1,0 +1,36 @@
+{
+  "server": "Internal server error",
+  "notFound": "Resource not found",
+  "validation": "Validation error",
+  "unauthorized": "Unauthorized access",
+  "forbidden": "Access forbidden",
+  "badRequest": "Bad request",
+  "conflict": "Resource conflict",
+  "payloadTooLarge": "Request payload too large",
+  "invalidJson": "Invalid JSON format",
+  "auth": {
+    "invalidToken": "Invalid authentication token",
+    "tokenExpired": "Authentication token has expired",
+    "invalidCredentials": "Invalid email or password",
+    "accountLocked": "Account has been locked",
+    "accountNotVerified": "Account email not verified",
+    "passwordResetRequired": "Password reset required"
+  },
+  "user": {
+    "notFound": "User not found",
+    "emailExists": "Email already exists",
+    "invalidEmail": "Invalid email format",
+    "weakPassword": "Password is too weak"
+  },
+  "product": {
+    "notFound": "Product not found",
+    "outOfStock": "Product is out of stock",
+    "insufficientStock": "Insufficient stock available"
+  },
+  "order": {
+    "notFound": "Order not found",
+    "cannotCancel": "Order cannot be cancelled",
+    "alreadyPaid": "Order is already paid",
+    "paymentFailed": "Payment processing failed"
+  }
+}

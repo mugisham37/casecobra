@@ -1,0 +1,50 @@
+{
+  "welcome": {
+    "subject": "Welcome to {{appName}}!",
+    "greeting": "Hello {{name}},",
+    "body": "Welcome to {{appName}}! We're excited to have you on board.",
+    "cta": "Get Started",
+    "footer": "If you have any questions, feel free to contact our support team."
+  },
+  "verification": {
+    "subject": "Verify your email address",
+    "greeting": "Hello {{name}},",
+    "body": "Please verify your email address by clicking the button below.",
+    "cta": "Verify Email",
+    "footer": "This link will expire in 24 hours. If you didn't create an account, please ignore this email."
+  },
+  "passwordReset": {
+    "subject": "Reset your password",
+    "greeting": "Hello {{name}},",
+    "body": "You requested to reset your password. Click the button below to create a new password.",
+    "cta": "Reset Password",
+    "footer": "This link will expire in 1 hour. If you didn't request this, please ignore this email."
+  },
+  "orderConfirmation": {
+    "subject": "Order Confirmation - #{{orderNumber}}",
+    "greeting": "Hello {{name}},",
+    "body": "Thank you for your order! Your order #{{orderNumber}} has been confirmed.",
+    "cta": "View Order",
+    "footer": "We'll send you another email when your order ships."
+  },
+  "orderShipped": {
+    "subject": "Your order has shipped - #{{orderNumber}}",
+    "greeting": "Hello {{name}},",
+    "body": "Great news! Your order #{{orderNumber}} has been shipped and is on its way.",
+    "cta": "Track Package",
+    "footer": "Tracking number: {{trackingNumber}}"
+  },
+  "orderDelivered": {
+    "subject": "Your order has been delivered - #{{orderNumber}}",
+    "greeting": "Hello {{name}},",
+    "body": "Your order #{{orderNumber}} has been delivered successfully.",
+    "cta": "Leave a Review",
+    "footer": "Thank you for shopping with us!"
+  },
+  "common": {
+    "regards": "Best regards,",
+    "team": "The {{appName}} Team",
+    "unsubscribe": "If you no longer wish to receive these emails, you can unsubscribe here.",
+    "copyright": "© {{year}} {{appName}}. All rights reserved."
+  }
+}

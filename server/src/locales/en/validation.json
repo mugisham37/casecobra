@@ -1,0 +1,32 @@
+{
+  "required": "This field is required",
+  "email": "Please enter a valid email address",
+  "password": "Password must be at least 8 characters long",
+  "passwordConfirm": "Passwords do not match",
+  "minLength": "Must be at least {{min}} characters long",
+  "maxLength": "Must be no more than {{max}} characters long",
+  "min": "Must be at least {{min}}",
+  "max": "Must be no more than {{max}}",
+  "numeric": "Must be a valid number",
+  "integer": "Must be a valid integer",
+  "positive": "Must be a positive number",
+  "url": "Must be a valid URL",
+  "phone": "Must be a valid phone number",
+  "date": "Must be a valid date",
+  "boolean": "Must be true or false",
+  "array": "Must be an array",
+  "object": "Must be an object",
+  "string": "Must be a string",
+  "unique": "This value already exists",
+  "exists": "This value does not exist",
+  "enum": "Must be one of: {{values}}",
+  "pattern": "Invalid format",
+  "custom": {
+    "strongPassword": "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+    "mongoId": "Invalid ID format",
+    "slug": "Must contain only letters, numbers, and hyphens",
+    "postalCode": "Invalid postal code format",
+    "creditCard": "Invalid credit card number",
+    "sku": "SKU must contain only letters, numbers, and hyphens"
+  }
+}

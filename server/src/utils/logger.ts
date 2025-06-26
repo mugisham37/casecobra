@@ -1,6 +1,8 @@
 import winston from 'winston';
+import path from 'path';
+import fs from 'fs';
 
-const { combine, timestamp, errors, json, colorize, simple } = winston.format;
+const { combine, timestamp, errors, json, colorize, simple, printf } = winston.format;
 
 // Define log levels
 const levels = {
@@ -23,6 +25,19 @@ const colors = {
 // Tell winston that you want to link the colors
 winston.addColors(colors);
 
+// Ensure logs directory exists
+const logsDir = path.join(process.cwd(), 'logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
+// Custom format for console output
+const consoleFormat = printf(({ level, message, timestamp, requestId, ...meta }) => {
+  const requestInfo = requestId ? `[${requestId}] ` : '';
+  const metaInfo = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+  return `${timestamp} ${level}: ${requestInfo}${message}${metaInfo}`;
+});
+
 // Create the logger
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -35,12 +50,16 @@ const logger = winston.createLogger({
   transports: [
     // Write all logs with importance level of `error` or less to `error.log`
     new winston.transports.File({
-      filename: 'logs/error.log',
+      filename: path.join(logsDir, 'error.log'),
       level: 'error',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
     }),
     // Write all logs with importance level of `info` or less to `combined.log`
     new winston.transports.File({
-      filename: 'logs/combined.log',
+      filename: path.join(logsDir, 'combined.log'),
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
     }),
   ],
   // Do not exit on handled exceptions
@@ -54,10 +73,25 @@ if (process.env.NODE_ENV !== 'production') {
     new winston.transports.Console({
       format: combine(
         colorize({ all: true }),
-        simple()
+        consoleFormat
       ),
     })
   );
 }
+
+/**
+ * Create a request-specific logger
+ * @param requestId Request ID
+ * @returns Logger with request ID context
+ */
+export const createRequestLogger = (requestId: string) => {
+  return {
+    error: (message: string, meta?: any) => logger.error(message, { requestId, ...meta }),
+    warn: (message: string, meta?: any) => logger.warn(message, { requestId, ...meta }),
+    info: (message: string, meta?: any) => logger.info(message, { requestId, ...meta }),
+    http: (message: string, meta?: any) => logger.http(message, { requestId, ...meta }),
+    debug: (message: string, meta?: any) => logger.debug(message, { requestId, ...meta }),
+  };
+};
 
 export default logger;
