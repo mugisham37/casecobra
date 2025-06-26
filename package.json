@@ -35,8 +35,7 @@
     "setup:server": "cd server && npm install",
     "clean": "npm run clean:client && npm run clean:server",
     "clean:client": "cd client && rm -rf .next node_modules",
-    "clean:server": "cd server && rm -rf dist node_modules",
-    "prepare": "husky install"
+    "clean:server": "cd server && rm -rf dist node_modules"
   },
   "devDependencies": {
     "@commitlint/cli": "^18.4.3",
