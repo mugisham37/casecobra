@@ -574,6 +574,57 @@ export const sendOrderConfirmationEmail = async (
 }
 
 /**
+ * Send order delivered email
+ * @param to Recipient email
+ * @param data Template data
+ * @param language Language code
+ * @param requestId Request ID for logging
+ * @returns Email send result
+ */
+export const sendOrderDeliveredEmail = async (
+  to: string,
+  data: {
+    firstName: string
+    orderId: string
+    orderNumber?: string
+    reviewUrl: string
+    orderUrl: string
+    storeName: string
+    year: number
+  },
+  language = "en",
+  requestId?: string,
+): Promise<any> => {
+  const logger = createRequestLogger(requestId)
+  logger.info(`Sending order delivered email to: ${to}, order ID: ${data.orderId}`)
+
+  try {
+    // Load template
+    const template = await loadTemplate(EmailType.ORDER_DELIVERED, language)
+
+    // Compile template with data
+    const html = template.html({
+      ...data,
+      greeting: translateEmail("orderDelivered.greeting", { firstName: data.firstName }, language),
+      message: translateEmail("orderDelivered.message", {}, language),
+      reviewMessage: translateEmail("orderDelivered.reviewMessage", {}, language),
+      reviewCta: translateEmail("orderDelivered.reviewCta", {}, language),
+      orderCta: translateEmail("orderDelivered.orderCta", {}, language),
+      support: translateEmail("orderDelivered.support", {}, language),
+    })
+
+    // Get subject from translations
+    const subject = translateEmail("orderDelivered.subject", { orderId: data.orderId }, language)
+
+    // Queue email
+    return queueEmail(to, subject, html, {}, requestId)
+  } catch (error: any) {
+    logger.error(`Failed to send order delivered email: ${error.message}`)
+    throw error
+  }
+}
+
+/**
  * Send password reset email
  * @param to Recipient email
  * @param data Template data
