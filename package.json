@@ -30,12 +30,19 @@
     "docker:dev": "docker-compose -f docker/docker-compose.yml up",
     "docker:prod": "docker-compose -f docker/docker-compose.prod.yml up",
     "docker:build": "docker-compose -f docker/docker-compose.yml build",
-    "setup": "npm install && npm run setup:client && npm run setup:server",
+    "setup": "npm install && npm run setup:client && npm run setup:server && npm run db:generate",
     "setup:client": "cd client && npm install",
     "setup:server": "cd server && npm install",
     "clean": "npm run clean:client && npm run clean:server",
     "clean:client": "cd client && rm -rf .next node_modules",
-    "clean:server": "cd server && rm -rf dist node_modules"
+    "clean:server": "cd server && rm -rf dist node_modules",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:reset": "prisma migrate reset",
+    "db:studio": "prisma studio",
+    "db:seed": "prisma db seed"
   },
   "devDependencies": {
     "@commitlint/cli": "^18.4.3",
@@ -64,7 +71,8 @@
     "nextjs",
     "nodejs",
     "typescript",
-    "mongodb",
+    "postgresql",
+    "prisma",
     "redis"
   ],
   "author": "Your Name",

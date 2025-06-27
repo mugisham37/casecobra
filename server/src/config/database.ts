@@ -1,43 +1,38 @@
-import mongoose from 'mongoose';
+import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
+
+// Import the extended Prisma client from the database directory
+import prisma from '../database/client';
 
 export const connectDatabase = async (): Promise<void> => {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce';
+    // Test the database connection
+    await prisma.$connect();
     
-    await mongoose.connect(mongoUri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-
-    logger.info('MongoDB connected successfully');
-
-    // Handle connection events
-    mongoose.connection.on('error', (error) => {
-      logger.error('MongoDB connection error:', error);
-    });
-
-    mongoose.connection.on('disconnected', () => {
-      logger.warn('MongoDB disconnected');
-    });
-
-    mongoose.connection.on('reconnected', () => {
-      logger.info('MongoDB reconnected');
-    });
+    // Perform a health check
+    const isHealthy = await prisma.healthCheck();
+    
+    if (isHealthy) {
+      logger.info('PostgreSQL connected successfully via Prisma');
+    } else {
+      throw new Error('Database health check failed');
+    }
 
   } catch (error) {
-    logger.error('Failed to connect to MongoDB:', error);
+    logger.error('Failed to connect to PostgreSQL:', error);
     throw error;
   }
 };
 
 export const disconnectDatabase = async (): Promise<void> => {
   try {
-    await mongoose.disconnect();
-    logger.info('MongoDB disconnected successfully');
+    await prisma.$disconnect();
+    logger.info('PostgreSQL disconnected successfully');
   } catch (error) {
-    logger.error('Error disconnecting from MongoDB:', error);
+    logger.error('Error disconnecting from PostgreSQL:', error);
     throw error;
   }
 };
+
+// Export the prisma instance for use throughout the application
+export { prisma };
