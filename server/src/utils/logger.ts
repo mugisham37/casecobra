@@ -81,16 +81,17 @@ if (process.env.NODE_ENV !== 'production') {
 
 /**
  * Create a request-specific logger
- * @param requestId Request ID
+ * @param requestId Request ID (optional)
  * @returns Logger with request ID context
  */
-export const createRequestLogger = (requestId: string) => {
+export const createRequestLogger = (requestId?: string) => {
+  const safeRequestId = requestId || `auto-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   return {
-    error: (message: string, meta?: any) => logger.error(message, { requestId, ...meta }),
-    warn: (message: string, meta?: any) => logger.warn(message, { requestId, ...meta }),
-    info: (message: string, meta?: any) => logger.info(message, { requestId, ...meta }),
-    http: (message: string, meta?: any) => logger.http(message, { requestId, ...meta }),
-    debug: (message: string, meta?: any) => logger.debug(message, { requestId, ...meta }),
+    error: (message: string, meta?: any) => logger.error(message, { requestId: safeRequestId, ...meta }),
+    warn: (message: string, meta?: any) => logger.warn(message, { requestId: safeRequestId, ...meta }),
+    info: (message: string, meta?: any) => logger.info(message, { requestId: safeRequestId, ...meta }),
+    http: (message: string, meta?: any) => logger.http(message, { requestId: safeRequestId, ...meta }),
+    debug: (message: string, meta?: any) => logger.debug(message, { requestId: safeRequestId, ...meta }),
   };
 };
 

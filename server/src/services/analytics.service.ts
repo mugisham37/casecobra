@@ -144,13 +144,11 @@ async function getSalesSummary(
         status: { in: ['DELIVERED', 'SHIPPED'] },
       },
       _sum: {
-        totalAmount: true,
+        total: true,
       },
-      _count: {
-        id: true,
-      },
+      _count: true,
       _avg: {
-        totalAmount: true,
+        total: true,
       },
     })
 
@@ -169,9 +167,9 @@ async function getSalesSummary(
 
     // Default values if no sales
     const currentPeriod = {
-      totalSales: Number(currentSales._sum.totalAmount) || 0,
-      totalOrders: currentSales._count.id || 0,
-      avgOrderValue: Number(currentSales._avg.totalAmount) || 0,
+      totalSales: Number(currentSales._sum.total) || 0,
+      totalOrders: currentSales._count || 0,
+      avgOrderValue: Number(currentSales._avg.total) || 0,
       totalItems: Number(currentOrderItems._sum.quantity) || 0,
     }
 
@@ -935,3 +933,27 @@ export const getSalesAnalytics = async (
     const salesAnalytics = {
       summary: salesSummary,
       trend: {
+        current: salesTrend,
+        previous: previousSalesTrend,
+      },
+      groupedSales,
+      period: {
+        startDate,
+        endDate,
+      },
+      options: {
+        interval,
+        groupBy,
+        compareWithPrevious,
+      },
+    }
+
+    // Cache the results
+    await setCache(cacheKey, salesAnalytics, CACHE_TTL.SALES_ANALYTICS)
+
+    return salesAnalytics
+  } catch (error: any) {
+    logger.error(`Error getting sales analytics: ${error.message}`)
+    throw new ApiError(`Failed to get sales analytics: ${error.message}`, 500)
+  }
+}

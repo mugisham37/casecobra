@@ -486,7 +486,8 @@ export const completeABTest = async (
       }
     } else {
       // Determine winner based on primary goal
-      finalWinner = await determineWinner(test, requestId)
+      const determinedWinner = await determineWinner(test, requestId)
+      finalWinner = determinedWinner ?? undefined
     }
 
     // Update test
