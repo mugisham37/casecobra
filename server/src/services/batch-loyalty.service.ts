@@ -3,6 +3,14 @@ import * as loyaltyService from './loyalty.service'
 import prisma from '../database/client'
 import { ApiError } from '../utils/api-error'
 
+// Enum for loyalty transaction types
+export enum LoyaltyTransactionType {
+  ORDER = "ORDER",
+  REFERRAL = "REFERRAL",
+  MANUAL = "MANUAL",
+  OTHER = "OTHER"
+}
+
 /**
  * Process loyalty points in batch
  * @param operations Array of operations
@@ -46,12 +54,20 @@ export const processBatchLoyaltyPoints = async (
     const chunkResults = await Promise.all(
       chunk.map(async (operation) => {
         try {
+          // Convert lowercase to uppercase enum values
+          const typeMapping: Record<string, 'ORDER' | 'REFERRAL' | 'MANUAL' | 'OTHER'> = {
+            'order': 'ORDER',
+            'referral': 'REFERRAL', 
+            'manual': 'MANUAL',
+            'other': 'OTHER'
+          }
+          
           await loyaltyService.addLoyaltyPoints(
             operation.userId,
             operation.points,
             operation.description,
             operation.referenceId,
-            operation.type || 'other',
+            typeMapping[operation.type || 'other'],
             requestId
           )
 
@@ -293,7 +309,7 @@ export const processBatchOrderLoyaltyPoints = async (
               points,
               `Points earned from order ${order.orderNumber}`,
               order.id,
-              'order',
+              'ORDER',
               requestId
             )
 

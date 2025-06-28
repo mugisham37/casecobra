@@ -102,7 +102,7 @@ export const getCustomerLoyaltyProgram = async (userId: string, requestId?: stri
     // Calculate tier based on lifetime points
     const totalLifetimePoints = Number(lifetimePoints._sum.points) || 0
     let currentTier = 'Bronze'
-    let nextTier = 'Silver'
+    let nextTier: string | null = 'Silver'
     let pointsForNextTier = 1000
 
     if (totalLifetimePoints >= 10000) {
@@ -155,7 +155,7 @@ export const getCustomerLoyaltyProgram = async (userId: string, requestId?: stri
       },
       tier: {
         current: currentTier,
-        next: nextTier,
+        next: nextTier as string | null,
         pointsForNext: pointsForNextTier,
       },
       referral: {
@@ -744,7 +744,7 @@ export const redeemReward = async (userId: string, rewardId: string, requestId?:
         rewardName: reward.name,
         pointsUsed: reward.pointsCost,
         code: redemptionCode,
-        status: 'ACTIVE',
+        status: 'PENDING',
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       },
     })
@@ -780,7 +780,7 @@ export const redeemReward = async (userId: string, rewardId: string, requestId?:
  */
 export const getUserRedemptions = async (
   userId: string,
-  status?: 'ACTIVE' | 'USED' | 'EXPIRED',
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'USED' | 'EXPIRED',
   requestId?: string,
 ): Promise<any[]> => {
   const logger = createRequestLogger(requestId)
@@ -819,7 +819,7 @@ export const useRedemptionCode = async (code: string, requestId?: string): Promi
     const redemption = await prisma.loyaltyRedemption.findFirst({
       where: {
         code,
-        status: 'ACTIVE',
+        status: 'PENDING',
         expiresAt: { gt: new Date() },
       },
     })
@@ -845,6 +845,62 @@ export const useRedemptionCode = async (code: string, requestId?: string): Promi
 }
 
 /**
+ * Adjust customer loyalty points (can be positive or negative)
+ * @param userId User ID
+ * @param pointsAdjustment Points adjustment (positive to add, negative to subtract)
+ * @param description Description of the adjustment
+ * @param requestId Request ID for logging
+ * @returns Updated user points
+ */
+export const adjustCustomerPoints = async (
+  userId: string,
+  pointsAdjustment: number,
+  description: string,
+  requestId?: string
+): Promise<number> => {
+  const logger = createRequestLogger(requestId)
+  logger.info(`Adjusting ${pointsAdjustment} loyalty points for user ${userId}`)
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Update user's loyalty points
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          loyaltyPoints: {
+            increment: pointsAdjustment,
+          },
+        },
+        select: {
+          loyaltyPoints: true,
+        },
+      })
+
+      // Create loyalty history record
+      await tx.loyaltyHistory.create({
+        data: {
+          userId,
+          type: pointsAdjustment > 0 ? 'OTHER' : 'EXPIRE',
+          points: pointsAdjustment,
+          description,
+        },
+      })
+
+      return updatedUser.loyaltyPoints || 0
+    })
+
+    // Clear cache
+    await setCache(`loyalty:program:${userId}`, null, 1)
+
+    logger.info(`Successfully adjusted ${pointsAdjustment} points for user ${userId}. New balance: ${result}`)
+    return result
+  } catch (error: any) {
+    logger.error(`Error adjusting loyalty points: ${error.message}`)
+    throw error
+  }
+}
+
+/**
  * Expire old redemptions
  * @param requestId Request ID for logging
  * @returns Number of expired redemptions
@@ -856,7 +912,7 @@ export const expireOldRedemptions = async (requestId?: string): Promise<number> 
   try {
     const result = await prisma.loyaltyRedemption.updateMany({
       where: {
-        status: 'ACTIVE',
+        status: 'PENDING',
         expiresAt: { lt: new Date() },
       },
       data: {
