@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-import { UserRole, JWTPayload } from '../../../shared/src/types/auth.types'
+import { User, JWTPayload } from '@shared/types/auth.types'
 import { ApiError } from '../utils/api-error'
 import { asyncHandler } from '../utils/async-handler'
 
@@ -8,12 +8,7 @@ import { asyncHandler } from '../utils/async-handler'
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        id: string
-        email: string
-        role: string
-        permissions: string[]
-      }
+      user?: User
     }
   }
 }
@@ -43,7 +38,8 @@ export const authenticate = asyncHandler(async (req: Request, res: Response, nex
 
     // Add user info to request
     req.user = {
-      id: decoded.sub,
+      _id: decoded._id || decoded.id,
+      id: decoded.id || decoded._id,
       email: decoded.email,
       role: decoded.role,
       permissions: decoded.permissions || []
@@ -119,7 +115,8 @@ export const optionalAuth = asyncHandler(async (req: Request, res: Response, nex
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload
       req.user = {
-        id: decoded.sub,
+        _id: decoded._id || decoded.id,
+        id: decoded.id || decoded._id,
         email: decoded.email,
         role: decoded.role,
         permissions: decoded.permissions || []

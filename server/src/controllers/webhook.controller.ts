@@ -15,7 +15,8 @@ export const handleLoyaltyWebhook = asyncHandler(async (req: Request, res: Respo
   // Verify signature (implement your own verification logic)
   if (!signature) {
     requestLogger.warn("Missing loyalty webhook signature")
-    return res.status(400).json({ status: "error", message: "Missing signature" })
+    res.status(400).json({ status: "error", message: "Missing signature" })
+    return
   }
 
   // Process webhook event

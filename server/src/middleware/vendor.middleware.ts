@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express"
 import { asyncHandler } from "../utils/async-handler"
 import { ApiError } from "../utils/api-error"
 import { createRequestLogger } from "../utils/logger"
+import { User } from "@shared/types/auth.types"
 
 // Note: Vendor model will be created in later phases
 // For now, we'll create a placeholder interface
@@ -40,12 +41,6 @@ declare global {
   namespace Express {
     interface Request {
       vendor?: IVendor
-      user?: {
-        _id: string
-        email: string
-        role: string
-        [key: string]: any
-      }
     }
   }
 }

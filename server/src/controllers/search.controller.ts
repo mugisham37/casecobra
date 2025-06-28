@@ -117,7 +117,7 @@ export const getProductSuggestions = asyncHandler(async (req: Request, res: Resp
   requestLogger.info(`Getting product suggestions for query: ${query}`)
 
   if (!query || query.length < 2) {
-    return res.status(200).json({
+    res.status(200).json({
       status: "success",
       requestId: req.id,
       results: 0,
@@ -125,6 +125,7 @@ export const getProductSuggestions = asyncHandler(async (req: Request, res: Resp
         suggestions: [],
       },
     })
+    return
   }
 
   const suggestions = await searchService.getProductSuggestions(
@@ -185,11 +186,12 @@ export const trackSearchQuery = asyncHandler(async (req: Request, res: Response)
   requestLogger.info(`Tracking search query: ${query}`)
 
   if (!query) {
-    return res.status(400).json({
+    res.status(400).json({
       status: "error",
       requestId: req.id,
       message: "Query is required",
     })
+    return
   }
 
   await searchService.trackSearchQuery(query, userId, results, req.id)
@@ -266,11 +268,12 @@ export const advancedSearchPost = asyncHandler(async (req: Request, res: Respons
 
   // Validate pagination
   if (page < 1 || limit < 1 || limit > 100) {
-    return res.status(400).json({
+    res.status(400).json({
       status: "error",
       requestId: req.id,
       message: "Invalid pagination parameters",
     })
+    return
   }
 
   const searchResults = await searchService.advancedSearch(

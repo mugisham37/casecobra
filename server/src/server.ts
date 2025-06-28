@@ -1,10 +1,10 @@
 import dotenv from "dotenv"
-import { PrismaClient } from "@prisma/client"
 import app from "./app"
 import logger from "./utils/logger"
 import { initScheduler, stopAllJobs } from "./services/scheduler.service"
 import { closeRedisConnection } from "./config/redis"
 import { initializeDefaultSettings } from "./services/settings.service"
+import { connectDatabase, disconnectDatabase } from "./config/database"
 
 // Load environment variables
 dotenv.config()
@@ -27,20 +27,6 @@ process.on("uncaughtException", (err: Error) => {
   process.exit(1)
 })
 
-// Initialize Prisma client
-const prisma = new PrismaClient()
-
-// Connect to database
-const connectDB = async (): Promise<PrismaClient> => {
-  try {
-    await prisma.$connect()
-    logger.info(`Database Connected successfully`)
-    return prisma
-  } catch (error) {
-    logger.error(`Error connecting to database: ${(error as Error).message}`)
-    throw error
-  }
-}
 
 // Graceful shutdown function
 const gracefulShutdown = async (reason: string): Promise<void> => {
@@ -57,7 +43,7 @@ const gracefulShutdown = async (reason: string): Promise<void> => {
 
     // Close Prisma connection
     logger.info("Closing database connection")
-    await prisma.$disconnect()
+    await disconnectDatabase()
 
     logger.info("All connections closed successfully")
     process.exit(0)
@@ -75,7 +61,7 @@ process.on("SIGINT", () => gracefulShutdown("SIGINT received"))
 const startServer = async (): Promise<any> => {
   try {
     // Connect to database
-    await connectDB()
+    await connectDatabase()
 
     // Initialize default settings
     try {
