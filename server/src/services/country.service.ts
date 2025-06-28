@@ -32,6 +32,7 @@ export const getAllCountries = async (requestId?: string): Promise<any[]> => {
       where: { isActive: true },
       include: {
         currency: true,
+        region: true,
       },
       orderBy: { name: 'asc' },
     })
@@ -73,6 +74,7 @@ export const getCountryByCode = async (code: string, requestId?: string): Promis
       },
       include: {
         currency: true,
+        region: true,
       },
     })
 
@@ -211,7 +213,11 @@ export const deleteCountry = async (code: string, requestId?: string): Promise<a
 
     // Check if country is in use
     const usersCount = await prisma.user.count({
-      where: { country: code.toUpperCase() },
+      where: { 
+        country: {
+          code: code.toUpperCase()
+        }
+      },
     })
 
     if (usersCount > 0) {
@@ -403,11 +409,14 @@ export const getCountriesByRegion = async (region: string, requestId?: string): 
   try {
     const countries = await prisma.country.findMany({
       where: {
-        region: { equals: region, mode: 'insensitive' },
+        region: { 
+          name: { equals: region, mode: 'insensitive' }
+        },
         isActive: true,
       },
       include: {
         currency: true,
+        region: true,
       },
       orderBy: { name: 'asc' },
     })
@@ -436,11 +445,12 @@ export const searchCountries = async (query: string, requestId?: string): Promis
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
           { code: { contains: query, mode: 'insensitive' } },
-          { region: { contains: query, mode: 'insensitive' } },
+          { region: { name: { contains: query, mode: 'insensitive' } } },
         ],
       },
       include: {
         currency: true,
+        region: true,
       },
       orderBy: { name: 'asc' },
     })

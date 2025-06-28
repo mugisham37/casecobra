@@ -39,7 +39,7 @@ export enum EmailType {
 // Email template interface
 interface EmailTemplate {
   subject: string
-  html: string
+  html: Handlebars.TemplateDelegate<any>
 }
 
 // Email data interface

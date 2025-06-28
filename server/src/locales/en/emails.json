@@ -1,9 +1,15 @@
 {
   "welcome": {
-    "subject": "Welcome to {{appName}}!",
-    "greeting": "Hello {{name}},",
-    "body": "Welcome to {{appName}}! We're excited to have you on board.",
-    "cta": "Get Started",
+    "subject": "Welcome to {{storeName}}!",
+    "greeting": "Hello {{firstName}},",
+    "message": "Welcome to our store!",
+    "benefits": "Your Benefits",
+    "benefit1": "Free shipping on orders over $50",
+    "benefit2": "Exclusive member discounts",
+    "benefit3": "Early access to new products",
+    "benefit4": "24/7 customer support",
+    "support": "If you have any questions, feel free to contact our support team.",
+    "cta": "Start Shopping",
     "footer": "If you have any questions, feel free to contact our support team."
   },
   "verification": {
@@ -15,16 +21,33 @@
   },
   "passwordReset": {
     "subject": "Reset your password",
-    "greeting": "Hello {{name}},",
-    "body": "You requested to reset your password. Click the button below to create a new password.",
+    "greeting": "Hello {{firstName}},",
+    "message": "You requested to reset your password for your account.",
+    "instruction": "Click the button below to create a new password. This link will expire in {{expiryTime}}.",
     "cta": "Reset Password",
+    "warning": "If you didn't request this password reset, please ignore this email. Your password will remain unchanged.",
+    "alternative": "If you're having trouble clicking the button, copy and paste the URL into your web browser.",
     "footer": "This link will expire in 1 hour. If you didn't request this, please ignore this email."
   },
   "orderConfirmation": {
-    "subject": "Order Confirmation - #{{orderNumber}}",
-    "greeting": "Hello {{name}},",
-    "body": "Thank you for your order! Your order #{{orderNumber}} has been confirmed.",
-    "cta": "View Order",
+    "subject": "Order Confirmation - #{{orderId}}",
+    "greeting": "Thank you for your order, {{firstName}}!",
+    "message": "We've received your order and are preparing it for shipment.",
+    "orderDetails": "Order Details",
+    "orderNumber": "Order Number",
+    "orderDate": "Order Date",
+    "itemsOrdered": "Items Ordered",
+    "product": "Product",
+    "quantity": "Quantity",
+    "price": "Price",
+    "total": "Total",
+    "subtotal": "Subtotal",
+    "tax": "Tax",
+    "shipping": "Shipping",
+    "totalAmount": "Total Amount",
+    "shippingAddress": "Shipping Address",
+    "trackingMessage": "We'll send you tracking information once your order ships.",
+    "cta": "View Order Details",
     "footer": "We'll send you another email when your order ships."
   },
   "orderShipped": {
@@ -35,10 +58,13 @@
     "footer": "Tracking number: {{trackingNumber}}"
   },
   "orderDelivered": {
-    "subject": "Your order has been delivered - #{{orderNumber}}",
-    "greeting": "Hello {{name}},",
-    "body": "Your order #{{orderNumber}} has been delivered successfully.",
-    "cta": "Leave a Review",
+    "subject": "Your order has been delivered - #{{orderId}}",
+    "greeting": "Hello {{firstName}},",
+    "message": "Your order has been delivered successfully! We hope you love your purchase.",
+    "reviewMessage": "How was your experience?",
+    "reviewCta": "Leave a Review",
+    "orderCta": "View Order Details",
+    "support": "If you have any issues with your order, please don't hesitate to contact us.",
     "footer": "Thank you for shopping with us!"
   },
   "common": {
