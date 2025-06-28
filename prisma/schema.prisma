@@ -1071,14 +1071,16 @@ model Notification {
 
 // Application Settings
 model Setting {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     Json
-  type      String   @default("string")
-  category  String   @default("general")
-  isPublic  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  type        String   @default("string")
+  category    String   @default("general")
+  group       String?  // Optional group field for organizing settings
+  description String?  // Optional description field for setting documentation
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("settings")
 }

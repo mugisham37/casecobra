@@ -3,6 +3,19 @@ import prisma from '../database/client'
 import { createRequestLogger } from '../utils/logger'
 import { getCache, setCache } from '../config/redis'
 import { ApiError } from '../utils/api-error'
+import {
+  SettingValue,
+  CreateSettingInput,
+  UpdateSettingInput,
+  SettingGroupResult,
+  BulkUpdateSettingInput,
+  ImportExportResult,
+  ValidationResult,
+  jsonValueToString,
+  parseJsonValue,
+  validateSettingType,
+  serializeValue
+} from '../types/settings.types'
 
 // Cache TTL in seconds
 const CACHE_TTL = {
@@ -47,13 +60,7 @@ export const getSetting = async <T>(
     }
 
     // Parse the value based on type
-    let parsedValue: T
-    try {
-      parsedValue = JSON.parse(setting.value) as T
-    } catch {
-      // If JSON parsing fails, return as string (assuming T is string)
-      parsedValue = setting.value as unknown as T
-    }
+    const parsedValue = parseJsonValue<T>(setting.value)
 
     // Cache setting
     await setCache(cacheKey, parsedValue, CACHE_TTL.SETTINGS)
@@ -78,32 +85,32 @@ export const getSetting = async <T>(
 export const setSetting = async (
   key: string,
   value: any,
-  description?: string,
-  group?: string,
+  description?: string | null,
+  group?: string | null,
   isPublic = false,
   requestId?: string,
-): Promise<any> => {
+): Promise<SettingValue> => {
   const logger = createRequestLogger(requestId || 'settings-set')
   logger.info(`Setting setting: ${key}`)
 
   try {
-    // Serialize value to JSON string
-    const serializedValue = typeof value === 'string' ? value : JSON.stringify(value)
+    // Serialize value to JsonValue
+    const serializedValue = serializeValue(value)
 
     // Update or create setting
     const setting = await prisma.setting.upsert({
       where: { key },
       update: {
         value: serializedValue,
-        ...(description && { description }),
-        ...(group && { group }),
+        description: description || null,
+        group: group || null,
         isPublic,
         updatedAt: new Date(),
       },
       create: {
         key,
         value: serializedValue,
-        description: description || '',
+        description: description || null,
         group: group || 'general',
         isPublic,
       },
@@ -117,7 +124,10 @@ export const setSetting = async (
       setCache('settings:public', null, 1),
     ])
 
-    return setting
+    return {
+      ...setting,
+      parsedValue: parseJsonValue(setting.value)
+    }
   } catch (error: any) {
     logger.error(`Error setting setting: ${error.message}`)
     throw new ApiError(`Failed to set setting: ${error.message}`, 500)
@@ -130,13 +140,13 @@ export const setSetting = async (
  * @param requestId Request ID for logging
  * @returns Settings in group
  */
-export const getSettingsByGroup = async (group: string, requestId?: string): Promise<any[]> => {
+export const getSettingsByGroup = async (group: string, requestId?: string): Promise<SettingValue[]> => {
   const logger = createRequestLogger(requestId || 'settings-group')
   logger.info(`Getting settings for group: ${group}`)
 
   // Try to get from cache
   const cacheKey = `settings:group:${group}`
-  const cachedSettings = await getCache<any[]>(cacheKey)
+  const cachedSettings = await getCache<SettingValue[]>(cacheKey)
 
   if (cachedSettings) {
     logger.info(`Retrieved settings from cache for group: ${group}`)
@@ -151,15 +161,9 @@ export const getSettingsByGroup = async (group: string, requestId?: string): Pro
     })
 
     // Parse values
-    const parsedSettings = settings.map(setting => ({
+    const parsedSettings: SettingValue[] = settings.map(setting => ({
       ...setting,
-      parsedValue: (() => {
-        try {
-          return JSON.parse(setting.value)
-        } catch {
-          return setting.value
-        }
-      })(),
+      parsedValue: parseJsonValue(setting.value)
     }))
 
     // Cache settings
@@ -178,13 +182,13 @@ export const getSettingsByGroup = async (group: string, requestId?: string): Pro
  * @param requestId Request ID for logging
  * @returns All settings
  */
-export const getAllSettings = async (includePrivate = true, requestId?: string): Promise<any[]> => {
+export const getAllSettings = async (includePrivate = true, requestId?: string): Promise<SettingValue[]> => {
   const logger = createRequestLogger(requestId || 'settings-all')
   logger.info(`Getting all settings, includePrivate: ${includePrivate}`)
 
   // Try to get from cache
   const cacheKey = includePrivate ? 'settings:all' : 'settings:public'
-  const cachedSettings = await getCache<any[]>(cacheKey)
+  const cachedSettings = await getCache<SettingValue[]>(cacheKey)
 
   if (cachedSettings) {
     logger.info('Retrieved all settings from cache')
@@ -201,19 +205,13 @@ export const getAllSettings = async (includePrivate = true, requestId?: string):
     // Get settings from database
     const settings = await prisma.setting.findMany({
       where,
-      orderBy: [{ group: 'asc' }, { key: 'asc' }],
+      orderBy: [{ category: 'asc' }, { group: 'asc' }, { key: 'asc' }],
     })
 
-    // Parse values and group by category
-    const parsedSettings = settings.map(setting => ({
+    // Parse values
+    const parsedSettings: SettingValue[] = settings.map(setting => ({
       ...setting,
-      parsedValue: (() => {
-        try {
-          return JSON.parse(setting.value)
-        } catch {
-          return setting.value
-        }
-      })(),
+      parsedValue: parseJsonValue(setting.value)
     }))
 
     // Cache settings
@@ -257,7 +255,7 @@ export const getPublicSettings = async (requestId?: string): Promise<Record<stri
  * @param requestId Request ID for logging
  * @returns Deleted setting
  */
-export const deleteSetting = async (key: string, requestId?: string): Promise<any> => {
+export const deleteSetting = async (key: string, requestId?: string): Promise<SettingValue> => {
   const logger = createRequestLogger(requestId || 'settings-delete')
   logger.info(`Deleting setting: ${key}`)
 
@@ -279,12 +277,15 @@ export const deleteSetting = async (key: string, requestId?: string): Promise<an
     // Clear cache
     await Promise.all([
       setCache(`setting:${key}`, null, 1),
-      setCache(`settings:group:${setting.group}`, null, 1),
+      setCache(`settings:group:${setting.group || 'general'}`, null, 1),
       setCache('settings:all', null, 1),
       setCache('settings:public', null, 1),
     ])
 
-    return deletedSetting
+    return {
+      ...deletedSetting,
+      parsedValue: parseJsonValue(deletedSetting.value)
+    }
   } catch (error: any) {
     logger.error(`Error deleting setting: ${error.message}`)
     throw error
@@ -298,47 +299,42 @@ export const deleteSetting = async (key: string, requestId?: string): Promise<an
  * @returns Updated settings
  */
 export const bulkUpdateSettings = async (
-  settings: Array<{
-    key: string
-    value: any
-    description?: string
-    group?: string
-    isPublic?: boolean
-  }>,
+  settings: BulkUpdateSettingInput[],
   requestId?: string,
-): Promise<any[]> => {
+): Promise<SettingValue[]> => {
   const logger = createRequestLogger(requestId || 'settings-bulk-update')
   logger.info(`Bulk updating ${settings.length} settings`)
 
   try {
-    const updatedSettings = []
+    const updatedSettings: SettingValue[] = []
 
     // Process settings in transaction
     await prisma.$transaction(async (tx) => {
       for (const settingData of settings) {
-        const serializedValue = typeof settingData.value === 'string' 
-          ? settingData.value 
-          : JSON.stringify(settingData.value)
+        const serializedValue = serializeValue(settingData.value)
 
         const setting = await tx.setting.upsert({
           where: { key: settingData.key },
           update: {
             value: serializedValue,
-            ...(settingData.description && { description: settingData.description }),
-            ...(settingData.group && { group: settingData.group }),
-            ...(settingData.isPublic !== undefined && { isPublic: settingData.isPublic }),
+            description: settingData.description || null,
+            group: settingData.group || null,
+            isPublic: settingData.isPublic ?? false,
             updatedAt: new Date(),
           },
           create: {
             key: settingData.key,
             value: serializedValue,
-            description: settingData.description || '',
+            description: settingData.description || null,
             group: settingData.group || 'general',
-            isPublic: settingData.isPublic || false,
+            isPublic: settingData.isPublic ?? false,
           },
         })
 
-        updatedSettings.push(setting)
+        updatedSettings.push({
+          ...setting,
+          parsedValue: parseJsonValue(setting.value)
+        })
       }
     })
 
@@ -399,7 +395,7 @@ export const initializeDefaultSettings = async (requestId?: string): Promise<voi
 
   try {
     // Define default settings
-    const defaultSettings = [
+    const defaultSettings: CreateSettingInput[] = [
       // General settings
       {
         key: 'site.name',
@@ -715,12 +711,7 @@ export const importSettings = async (
   jsonData: string,
   overwriteExisting = false,
   requestId?: string,
-): Promise<{
-  imported: number
-  skipped: number
-  errors: number
-  details: Array<{ key: string; status: 'imported' | 'skipped' | 'error'; message?: string }>
-}> => {
+): Promise<ImportExportResult> => {
   const logger = createRequestLogger(requestId || 'settings-import')
   logger.info(`Importing settings, overwriteExisting: ${overwriteExisting}`)
 
@@ -732,11 +723,11 @@ export const importSettings = async (
       throw new ApiError('Invalid settings data format', 400)
     }
 
-    const results = {
+    const results: ImportExportResult = {
       imported: 0,
       skipped: 0,
       errors: 0,
-      details: [] as Array<{ key: string; status: 'imported' | 'skipped' | 'error'; message?: string }>,
+      details: [],
     }
 
     // Process each setting
@@ -795,23 +786,19 @@ export const importSettings = async (
  * @param requestId Request ID for logging
  * @returns Array of setting groups with counts
  */
-export const getSettingGroups = async (requestId?: string): Promise<Array<{
-  group: string
-  count: number
-  description?: string
-}>> => {
+export const getSettingGroups = async (requestId?: string): Promise<SettingGroupResult[]> => {
   const logger = createRequestLogger(requestId || 'settings-groups')
   logger.info('Getting setting groups')
 
   try {
-    // Get groups with counts
+    // Get groups with counts using category instead of group for now
     const groups = await prisma.setting.groupBy({
-      by: ['group'],
+      by: ['category'],
       _count: {
         id: true,
       },
       orderBy: {
-        group: 'asc',
+        category: 'asc',
       },
     })
 
@@ -829,13 +816,53 @@ export const getSettingGroups = async (requestId?: string): Promise<Array<{
     }
 
     return groups.map(group => ({
-      group: group.group,
+      group: group.category,
       count: group._count.id,
-      description: groupDescriptions[group.group],
+      description: groupDescriptions[group.category],
     }))
   } catch (error: any) {
     logger.error(`Error getting setting groups: ${error.message}`)
     throw new ApiError(`Failed to get setting groups: ${error.message}`, 500)
+  }
+}
+
+/**
+ * Get settings with metadata (including private info for admin use)
+ * @param category Optional category filter
+ * @param group Optional group filter
+ * @param requestId Request ID for logging
+ * @returns Settings with metadata
+ */
+export const getSettingsWithMetadata = async (
+  category?: string,
+  group?: string,
+  requestId?: string
+): Promise<Array<SettingValue & { valueAsString: string }>> => {
+  const logger = createRequestLogger(requestId || 'settings-metadata')
+  logger.info('Getting settings with metadata')
+
+  try {
+    const where: Prisma.SettingWhereInput = {}
+    if (category) where.category = category
+    if (group) where.group = group
+
+    const settings = await prisma.setting.findMany({
+      where,
+      orderBy: [
+        { category: 'asc' },
+        { group: 'asc' },
+        { key: 'asc' }
+      ],
+    })
+
+    return settings.map(setting => ({
+      ...setting,
+      parsedValue: parseJsonValue(setting.value),
+      valueAsString: jsonValueToString(setting.value),
+    }))
+  } catch (error: any) {
+    logger.error(`Error getting settings with metadata: ${error.message}`)
+    throw new ApiError(`Failed to get settings with metadata: ${error.message}`, 500)
   }
 }
 
@@ -856,7 +883,7 @@ const invalidateAllSettingsCache = async (): Promise<void> => {
     const cacheKeys = settings.map(setting => `setting:${setting.key}`)
     
     // Clear group caches
-    const groups = [...new Set(settings.map(setting => setting.group))]
+    const groups = [...new Set(settings.map(setting => setting.group || 'general'))]
     const groupCacheKeys = groups.map(group => `settings:group:${group}`)
 
     // Clear all caches
@@ -879,9 +906,9 @@ const invalidateAllSettingsCache = async (): Promise<void> => {
  * @param value Setting value
  * @returns Validation result
  */
-export const validateSetting = (key: string, value: any): { valid: boolean; message?: string } => {
+export const validateSetting = (key: string, value: any): ValidationResult => {
   // Define validation rules for specific settings
-  const validationRules: Record<string, (value: any) => { valid: boolean; message?: string }> = {
+  const validationRules: Record<string, (value: any) => ValidationResult> = {
     'loyalty.pointsPerCurrency': (value) => {
       const num = Number(value)
       return {
