@@ -3,6 +3,18 @@ import prisma from '../database/client'
 import { createRequestLogger } from '../utils/logger'
 import { ApiError } from '../utils/api-error'
 import { getCache, setCache } from '../config/redis'
+import { toNumber, safePercentage, safeRound, safeSubtract } from '../utils/decimal.utils'
+import type { 
+  VendorDashboardSummary, 
+  VendorSalesSummary, 
+  VendorProductSummary,
+  VendorOrderSummary,
+  VendorPayoutSummary,
+  VendorRecentOrder,
+  VendorTopProduct,
+  VendorSalesTrend,
+  RawProductWithImages
+} from '../types/vendor-analytics.types'
 
 // Cache TTL in seconds
 const CACHE_TTL = {
@@ -192,8 +204,8 @@ async function getVendorSalesSummary(
 
     // Calculate commission and net sales
     const totalSales = Number(currentPeriod.total_sales) || 0
-    const commission = (totalSales * commissionRate) / 100
-    const netSales = totalSales - commission
+    const commission = safePercentage(totalSales, commissionRate)
+    const netSales = safeSubtract(totalSales, commission)
 
     return {
       totalSales,
@@ -388,8 +400,8 @@ async function getVendorPayoutSummary(
 
     // Calculate total sales and available balance
     const totalSales = Number(salesData[0]?.total_sales) || 0
-    const commission = (totalSales * commissionRate) / 100
-    const availableBalance = totalSales - commission - totalPayouts
+    const commission = safePercentage(totalSales, commissionRate)
+    const availableBalance = safeSubtract(safeSubtract(totalSales, commission), totalPayouts)
 
     return {
       totalPayouts: Math.round(totalPayouts * 100) / 100,
@@ -511,18 +523,25 @@ async function getVendorTopProducts(
         p.name,
         p.sku,
         p.price,
-        p.images,
+        COALESCE(
+          json_agg(
+            json_build_object('url', pi.url, 'altText', pi."altText")
+            ORDER BY pi."sortOrder"
+          ) FILTER (WHERE pi.id IS NOT NULL), 
+          '[]'::json
+        ) as images,
         SUM(oi.quantity) as quantity_sold,
         SUM(oi.price * oi.quantity) as revenue,
         COUNT(DISTINCT o.id) as order_count
       FROM "Product" p
+      LEFT JOIN "ProductImage" pi ON p.id = pi."productId"
       JOIN "OrderItem" oi ON p.id = oi."productId"
       JOIN "Order" o ON oi."orderId" = o.id
       WHERE p."vendorId" = ${vendorId}
         AND o."createdAt" >= ${startDate}
         AND o."createdAt" <= ${endDate}
         AND o.status IN ('DELIVERED', 'SHIPPED')
-      GROUP BY p.id, p.name, p.sku, p.price, p.images
+      GROUP BY p.id, p.name, p.sku, p.price
       ORDER BY revenue DESC
       LIMIT ${limit}
     `
@@ -532,7 +551,7 @@ async function getVendorTopProducts(
       name: product.name,
       sku: product.sku,
       price: Number(product.price),
-      image: product.images?.[0] || null,
+      image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0].url : null,
       quantitySold: Number(product.quantity_sold),
       revenue: Math.round(Number(product.revenue) * 100) / 100,
       orderCount: Number(product.order_count),
@@ -734,18 +753,25 @@ async function getVendorSalesByProduct(
         p.name,
         p.sku,
         p.price,
-        p.images,
+        COALESCE(
+          json_agg(
+            json_build_object('url', pi.url, 'altText', pi."altText")
+            ORDER BY pi."sortOrder"
+          ) FILTER (WHERE pi.id IS NOT NULL), 
+          '[]'::json
+        ) as images,
         SUM(oi.price * oi.quantity) as sales,
         SUM(oi.quantity) as quantity,
         COUNT(DISTINCT o.id) as order_count
       FROM "Product" p
+      LEFT JOIN "ProductImage" pi ON p.id = pi."productId"
       JOIN "OrderItem" oi ON p.id = oi."productId"
       JOIN "Order" o ON oi."orderId" = o.id
       WHERE p."vendorId" = ${vendorId}
         AND o."createdAt" >= ${startDate}
         AND o."createdAt" <= ${endDate}
         AND o.status IN ('DELIVERED', 'SHIPPED')
-      GROUP BY p.id, p.name, p.sku, p.price, p.images
+      GROUP BY p.id, p.name, p.sku, p.price
       ORDER BY sales DESC
     `
 
@@ -758,7 +784,7 @@ async function getVendorSalesByProduct(
       name: product.name,
       sku: product.sku,
       price: Number(product.price),
-      image: product.images?.[0] || null,
+      image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0].url : null,
       sales: Math.round(Number(product.sales) * 100) / 100,
       quantity: Number(product.quantity),
       orderCount: Number(product.order_count),
@@ -951,6 +977,16 @@ export const getVendorProductAnalytics = async (
             name: true,
           },
         },
+        images: {
+          select: {
+            url: true,
+            altText: true,
+          },
+          orderBy: {
+            sortOrder: 'asc',
+          },
+          take: 1,
+        },
       },
       orderBy: { quantity: 'asc' },
       take: limit,
@@ -967,6 +1003,16 @@ export const getVendorProductAnalytics = async (
           select: {
             name: true,
           },
+        },
+        images: {
+          select: {
+            url: true,
+            altText: true,
+          },
+          orderBy: {
+            sortOrder: 'asc',
+          },
+          take: 1,
         },
       },
       orderBy: { updatedAt: 'desc' },
