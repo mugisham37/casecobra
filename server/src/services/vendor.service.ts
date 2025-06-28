@@ -28,8 +28,13 @@ export const createVendor = async (
 
   try {
     // Check if vendor with same email already exists
-    const existingVendor = await prisma.vendor.findUnique({
-      where: { contactEmail: vendorData.contactEmail },
+    const existingVendor = await prisma.vendor.findFirst({
+      where: { 
+        OR: [
+          { email: vendorData.contactEmail },
+          { contactEmail: vendorData.contactEmail }
+        ]
+      },
     })
     if (existingVendor) {
       throw new ApiError('Vendor with this email already exists', 400)
@@ -847,14 +852,17 @@ export const calculateVendorPayout = async (
  * @param requestId Request ID for logging
  * @returns Created payout
  */
-export const createVendorPayout = async (payoutData: Prisma.PayoutCreateInput, requestId?: string): Promise<any> => {
+export const createVendorPayout = async (
+  payoutData: Omit<Prisma.PayoutCreateInput, 'vendor'> & { vendorId: string },
+  requestId?: string
+): Promise<any> => {
   const logger = createRequestLogger(requestId || 'vendor-payout-create')
   logger.info(`Creating payout for vendor ID: ${payoutData.vendorId}`)
 
   try {
     // Check if vendor exists
     const vendor = await prisma.vendor.findUnique({
-      where: { id: payoutData.vendorId as string },
+      where: { id: payoutData.vendorId },
     })
 
     if (!vendor) {
@@ -864,7 +872,7 @@ export const createVendorPayout = async (payoutData: Prisma.PayoutCreateInput, r
     // Check if there's already a payout for this period
     const existingPayout = await prisma.payout.findFirst({
       where: {
-        vendorId: payoutData.vendorId as string,
+        vendorId: payoutData.vendorId,
         periodStart: { lte: payoutData.periodEnd as Date },
         periodEnd: { gte: payoutData.periodStart as Date },
       },
@@ -874,9 +882,18 @@ export const createVendorPayout = async (payoutData: Prisma.PayoutCreateInput, r
       throw new ApiError('A payout already exists for this period', 400)
     }
 
+    // Prepare payout data with vendor relation
+    const { vendorId, ...restPayoutData } = payoutData
+    const payoutCreateData: Prisma.PayoutCreateInput = {
+      ...restPayoutData,
+      vendor: {
+        connect: { id: vendorId }
+      }
+    }
+
     // Create payout
     const payout = await prisma.payout.create({
-      data: payoutData,
+      data: payoutCreateData,
     })
     logger.info(`Payout created with ID: ${payout.id}`)
 
