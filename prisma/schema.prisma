@@ -173,6 +173,7 @@ model User {
   addresses         UserAddress[]
   orders            Order[]
   reviews           Review[]
+  reviewHelpfulVotes ReviewHelpfulVote[]
   cart              Cart?
   loyaltyProgram    LoyaltyProgram?
   loyaltyHistory    LoyaltyHistory[]
@@ -189,6 +190,11 @@ model User {
   loyaltyReferralReceived  LoyaltyReferral[] @relation("UserReferred")
   loyaltyRedemptions       LoyaltyRedemption[]
   notifications     Notification[]
+  
+  // Analytics relations for scheduler service
+  productViews      ProductView[]
+  searchQueries     SearchQuery[]
+  userSessions      UserSession[]
 
   @@map("users")
 }
@@ -413,6 +419,11 @@ model Product {
   // Rating aggregation
   ratingAverage       Decimal   @default(0) @db.Decimal(3, 2)
   ratingCount         Int       @default(0)
+  averageRating       Decimal   @default(0) @db.Decimal(3, 2)
+  reviewCount         Int       @default(0)
+
+  // Popularity score for scheduler service
+  popularityScore     Float?    @default(0)
 
   // Dimensions and weight
   length              Decimal?  @db.Decimal(8, 2)
@@ -440,6 +451,7 @@ model Product {
   orderItems          OrderItem[]
   cartItems           CartItem[]
   subcategories       ProductCategory[]
+  productViews        ProductView[]
 
   @@map("products")
 }
@@ -568,10 +580,11 @@ model Payment {
 
 // Shopping Cart
 model Cart {
-  id        String     @id @default(cuid())
-  userId    String     @unique
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id           String     @id @default(cuid())
+  userId       String     @unique
+  reminderSent Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   // Relationships
   user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -598,25 +611,57 @@ model CartItem {
   @@map("cart_items")
 }
 
+// Review Status Enum
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // Reviews and Ratings
 model Review {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   userId    String
   productId String
-  rating    Int      @db.SmallInt
+  rating    Int           @db.SmallInt
   title     String?
   comment   String?
-  verified  Boolean  @default(false)
-  helpful   Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  verified  Boolean       @default(false)
+  helpful   Int           @default(0)
+  status    ReviewStatus  @default(PENDING)
+  images    String[]      @default([])
+  pros      String[]      @default([])
+  cons      String[]      @default([])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // Moderation fields
+  moderationReason String?
+  moderatedAt      DateTime?
 
   // Relationships
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product      Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  helpfulVotes ReviewHelpfulVote[]
 
   @@unique([userId, productId])
   @@map("reviews")
+}
+
+// Review Helpful Votes
+model ReviewHelpfulVote {
+  id       String   @id @default(cuid())
+  userId   String
+  reviewId String
+  helpful  Boolean  // true for helpful, false for not helpful
+  createdAt DateTime @default(now())
+
+  // Relationships
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reviewId], name: "reviewId_userId")
+  @@map("review_helpful_votes")
 }
 
 // Loyalty Program
@@ -1036,6 +1081,44 @@ model Setting {
   updatedAt DateTime @updatedAt
 
   @@map("settings")
+}
+
+// Analytics Models for Scheduler Service
+model ProductView {
+  id        String   @id @default(cuid())
+  productId String
+  userId    String?
+  createdAt DateTime @default(now())
+  
+  // Relationships
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@map("product_views")
+}
+
+model SearchQuery {
+  id        String   @id @default(cuid())
+  query     String
+  userId    String?
+  createdAt DateTime @default(now())
+  
+  // Relationships
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@map("search_queries")
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_sessions")
 }
 
 // Indexes for performance optimization

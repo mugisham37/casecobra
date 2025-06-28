@@ -51,7 +51,7 @@ export const advancedSearch = async (
 
   // Build search query
   const searchQuery: Prisma.ProductWhereInput = {
-    isActive: true,
+    active: true,
   }
 
   // Add text search if query is provided
@@ -126,7 +126,7 @@ export const advancedSearch = async (
     const totalPages = Math.ceil(count / limit)
 
     // Get facets if requested
-    let facets = null
+    let facets: Record<string, any> | undefined = undefined
     if (includeFacets) {
       facets = await getFacets(searchQuery, requestId)
     }
@@ -211,7 +211,7 @@ async function processSearchFilters(
 
     // Process featured filter
     if (filters.featured !== undefined) {
-      searchQuery.isFeatured = filters.featured === 'true'
+      searchQuery.featured = filters.featured === 'true'
     }
 
     // Process tags filter
@@ -474,7 +474,7 @@ export const getProductSuggestions = async (
     // Search for products
     const products = await prisma.product.findMany({
       where: {
-        isActive: true,
+        active: true,
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
           { description: { contains: query, mode: 'insensitive' } },

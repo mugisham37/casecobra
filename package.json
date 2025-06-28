@@ -85,6 +85,7 @@
     "exceljs": "^4.4.0",
     "handlebars": "^4.7.8",
     "json2csv": "^6.0.0-alpha.2",
+    "node-cron": "^4.1.1",
     "pdfkit": "^0.17.1",
     "pg": "^8.16.2",
     "prisma": "^6.10.1"

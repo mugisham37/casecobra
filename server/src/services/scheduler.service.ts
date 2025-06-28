@@ -1,4 +1,4 @@
-import cron from 'node-cron'
+import * as cron from 'node-cron'
 import { createRequestLogger } from '../utils/logger'
 import * as emailService from './email.service'
 import * as loyaltyService from './loyalty.service'
@@ -24,7 +24,7 @@ export const initScheduler = (): void => {
     jobs.processEmailQueue = {
       task: cron.schedule('*/5 * * * *', async () => {
         await processEmailQueueJob()
-      }, { scheduled: false }),
+      }),
       description: 'Process email queue every 5 minutes',
     }
 
@@ -32,7 +32,7 @@ export const initScheduler = (): void => {
     jobs.expireLoyaltyPoints = {
       task: cron.schedule('0 0 * * *', async () => {
         await expireLoyaltyPointsJob()
-      }, { scheduled: false }),
+      }),
       description: 'Expire old loyalty points daily at midnight',
     }
 
@@ -40,7 +40,7 @@ export const initScheduler = (): void => {
     jobs.awardBirthdayBonuses = {
       task: cron.schedule('0 8 * * *', async () => {
         await awardBirthdayBonusesJob()
-      }, { scheduled: false }),
+      }),
       description: 'Award birthday bonus points daily at 8 AM',
     }
 
@@ -48,7 +48,7 @@ export const initScheduler = (): void => {
     jobs.cleanupExpiredRedemptions = {
       task: cron.schedule('0 2 * * *', async () => {
         await cleanupExpiredRedemptionsJob()
-      }, { scheduled: false }),
+      }),
       description: 'Clean up expired redemptions daily at 2 AM',
     }
 
@@ -56,7 +56,7 @@ export const initScheduler = (): void => {
     jobs.sendWeeklyLoyaltySummary = {
       task: cron.schedule('0 9 * * 0', async () => {
         await sendWeeklyLoyaltySummaryJob()
-      }, { scheduled: false }),
+      }),
       description: 'Send weekly loyalty summary emails on Sundays at 9 AM',
     }
 
@@ -64,7 +64,7 @@ export const initScheduler = (): void => {
     jobs.updateProductPopularity = {
       task: cron.schedule('0 3 * * *', async () => {
         await updateProductPopularityJob()
-      }, { scheduled: false }),
+      }),
       description: 'Update product popularity scores daily at 3 AM',
     }
 
@@ -72,7 +72,7 @@ export const initScheduler = (): void => {
     jobs.cleanupOldAnalytics = {
       task: cron.schedule('0 4 1 * *', async () => {
         await cleanupOldAnalyticsJob()
-      }, { scheduled: false }),
+      }),
       description: 'Clean up old analytics data monthly on the 1st at 4 AM',
     }
 
@@ -80,7 +80,7 @@ export const initScheduler = (): void => {
     jobs.sendAbandonedCartReminders = {
       task: cron.schedule('0 */2 * * *', async () => {
         await sendAbandonedCartRemindersJob()
-      }, { scheduled: false }),
+      }),
       description: 'Send abandoned cart reminders every 2 hours',
     }
 
@@ -88,7 +88,7 @@ export const initScheduler = (): void => {
     jobs.updateCurrencyRates = {
       task: cron.schedule('0 6 * * *', async () => {
         await updateCurrencyRatesJob()
-      }, { scheduled: false }),
+      }),
       description: 'Update currency exchange rates daily at 6 AM',
     }
 
@@ -96,7 +96,7 @@ export const initScheduler = (): void => {
     jobs.generateDailyReports = {
       task: cron.schedule('0 5 * * *', async () => {
         await generateDailyReportsJob()
-      }, { scheduled: false }),
+      }),
       description: 'Generate daily reports at 5 AM',
     }
 
@@ -104,7 +104,7 @@ export const initScheduler = (): void => {
     jobs.backupDatabase = {
       task: cron.schedule('0 1 * * 6', async () => {
         await backupDatabaseJob()
-      }, { scheduled: false }),
+      }),
       description: 'Backup database weekly on Saturdays at 1 AM',
     }
 
@@ -112,7 +112,7 @@ export const initScheduler = (): void => {
     jobs.cleanupTempFiles = {
       task: cron.schedule('0 1 * * *', async () => {
         await cleanupTempFilesJob()
-      }, { scheduled: false }),
+      }),
       description: 'Clean up temporary files daily at 1 AM',
     }
 
@@ -584,7 +584,7 @@ async function cleanupOldAnalyticsJob(): Promise<void> {
       }),
     ])
 
-    const totalDeleted = deletedCounts.reduce((sum, result) => sum + result.count, 0)
+    const totalDeleted = deletedCounts.reduce((sum: number, result: any) => sum + result.count, 0)
     logger.info(`Cleaned up ${totalDeleted} old analytics records`)
   } catch (error: any) {
     logger.error(`Error cleaning up old analytics data: ${error.message}`)
@@ -711,7 +711,7 @@ async function generateDailyReportsJob(): Promise<void> {
         createdAt: { gte: yesterday, lt: today },
         status: { in: ['DELIVERED', 'SHIPPED'] },
       },
-      _sum: { totalAmount: true },
+      _sum: { total: true },
       _count: { id: true },
     })
 
@@ -724,7 +724,7 @@ async function generateDailyReportsJob(): Promise<void> {
     })
 
     // Log daily summary
-    logger.info(`Daily Report - Sales: $${salesData._sum.totalAmount || 0}, Orders: ${salesData._count.id}, New Users: ${newUsers}`)
+    logger.info(`Daily Report - Sales: $${salesData._sum?.total || 0}, Orders: ${salesData._count?.id || 0}, New Users: ${newUsers}`)
   } catch (error: any) {
     logger.error(`Error generating daily reports: ${error.message}`)
   }
@@ -785,7 +785,7 @@ export const addCustomJob = (
     }
 
     jobs[name] = {
-      task: cron.schedule(cronExpression, jobFunction, { scheduled: false }),
+      task: cron.schedule(cronExpression, jobFunction),
       description,
     }
 

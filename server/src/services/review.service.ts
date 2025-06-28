@@ -42,7 +42,7 @@ export const createReview = async (
       select: {
         id: true,
         name: true,
-        isActive: true,
+        active: true,
       },
     })
 
@@ -50,7 +50,7 @@ export const createReview = async (
       throw new ApiError('Product not found', 404)
     }
 
-    if (!product.isActive) {
+    if (!product.active) {
       throw new ApiError('Cannot review inactive product', 400)
     }
 
@@ -108,7 +108,7 @@ export const createReview = async (
           images: reviewData.images || [],
           pros: reviewData.pros || [],
           cons: reviewData.cons || [],
-          isVerified,
+          verified: isVerified,
           status: 'APPROVED', // Auto-approve for now, can be changed to PENDING for moderation
         },
         include: {
@@ -300,7 +300,7 @@ export const getProductReviews = async (
     }
 
     if (options.verified !== undefined) {
-      where.isVerified = options.verified
+      where.verified = options.verified
     }
 
     // Determine sort order
@@ -317,7 +317,7 @@ export const getProductReviews = async (
         orderBy = { rating: 'asc' }
         break
       case 'helpful':
-        orderBy = { helpfulCount: 'desc' }
+        orderBy = { helpful: 'desc' }
         break
       default:
         orderBy = { createdAt: 'desc' }
@@ -804,11 +804,7 @@ export const markReviewHelpful = async (
       },
     })
 
-    // Update review helpful count
-    await prisma.review.update({
-      where: { id: reviewId },
-      data: { helpfulCount },
-    })
+    // Note: helpfulCount is calculated from the relation, no need to update directly
 
     return { helpful, helpfulCount }
   } catch (error: any) {
