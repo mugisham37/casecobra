@@ -1,8 +1,34 @@
-import { Prisma } from '@prisma/client'
+import { Prisma, OrderStatus, PaymentStatus } from '@prisma/client'
 import prisma from '../database/client'
 import { createRequestLogger } from '../utils/logger'
 import { getCache, setCache } from '../config/redis'
 import { ApiError } from '../utils/api-error'
+import {
+  safeDecimalToNumber,
+  calculateGrowthPercentage as utilsCalculateGrowthPercentage,
+  safeGetCount,
+  safeGetSum,
+  safeGetAverage,
+  getPreviousPeriodDates,
+  formatOrderNumber,
+  calculatePercentage,
+  validateDateRange,
+  getDateTruncFunction,
+  createAnalyticsCacheKey
+} from '../utils/analytics.utils'
+import {
+  SalesAnalytics,
+  CustomerSummary,
+  ProductSummary,
+  OrderSummary,
+  RecentOrderSummary,
+  ProductSalesData,
+  CategorySalesData,
+  VendorSalesData,
+  SalesTrendData,
+  DashboardAnalytics,
+  AnalyticsOptions
+} from '../types/analytics.types'
 
 // Cache TTL in seconds
 const CACHE_TTL = {
@@ -189,13 +215,13 @@ async function getSalesSummary(
           status: { in: ['DELIVERED', 'SHIPPED'] },
         },
         _sum: {
-          totalAmount: true,
+          total: true,
         },
         _count: {
           id: true,
         },
         _avg: {
-          totalAmount: true,
+          total: true,
         },
       })
 
@@ -212,10 +238,10 @@ async function getSalesSummary(
       })
 
       const previousPeriod = {
-        totalSales: Number(previousSales._sum.totalAmount) || 0,
-        totalOrders: previousSales._count.id || 0,
-        avgOrderValue: Number(previousSales._avg.totalAmount) || 0,
-        totalItems: Number(previousOrderItems._sum.quantity) || 0,
+        totalSales: safeGetSum(previousSales._sum, 'total'),
+        totalOrders: safeGetCount(previousSales._count, 'id'),
+        avgOrderValue: safeGetAverage(previousSales._avg, 'total'),
+        totalItems: safeGetSum(previousOrderItems._sum, 'quantity'),
       }
 
       // Calculate growth percentages
@@ -466,7 +492,7 @@ async function getOrderSummary(startDate: Date, endDate: Date, requestId?: strin
         id: true,
       },
       _sum: {
-        totalAmount: true,
+        total: true,
       },
     })
 
@@ -479,12 +505,12 @@ async function getOrderSummary(startDate: Date, endDate: Date, requestId?: strin
     }
 
     paymentStats.forEach((item) => {
-      if (item.paymentStatus === 'PAID') {
-        paymentCounts.paid = item._count.id
-        paymentCounts.paidTotal = Number(item._sum.totalAmount) || 0
+      if (item.paymentStatus === PaymentStatus.COMPLETED) {
+        paymentCounts.paid = safeGetCount(item._count, 'id')
+        paymentCounts.paidTotal = safeGetSum(item._sum, 'total')
       } else {
-        paymentCounts.unpaid = item._count.id
-        paymentCounts.unpaidTotal = Number(item._sum.totalAmount) || 0
+        paymentCounts.unpaid = safeGetCount(item._count, 'id')
+        paymentCounts.unpaidTotal = safeGetSum(item._sum, 'total')
       }
     })
 
@@ -540,7 +566,7 @@ async function getRecentOrders(limit: number, requestId?: string): Promise<any[]
             email: order.user.email,
           }
         : null,
-      totalAmount: Number(order.totalAmount),
+      totalAmount: safeDecimalToNumber(order.total),
       status: order.status,
       paymentStatus: order.paymentStatus,
       createdAt: order.createdAt,
@@ -821,7 +847,7 @@ async function getSalesTrend(
     const salesTrend = await prisma.$queryRaw<any[]>`
       SELECT 
         DATE_TRUNC(${truncFunction}, "createdAt") as date,
-        SUM("totalAmount") as sales,
+        SUM("total") as sales,
         COUNT(*) as orders,
         SUM((
           SELECT SUM("quantity") 
