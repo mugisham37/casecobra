@@ -625,6 +625,63 @@ export const sendOrderDeliveredEmail = async (
 }
 
 /**
+ * Send order shipped email
+ * @param to Recipient email
+ * @param data Template data
+ * @param language Language code
+ * @param requestId Request ID for logging
+ * @returns Email send result
+ */
+export const sendOrderShippedEmail = async (
+  to: string,
+  data: {
+    firstName: string
+    orderId: string
+    orderNumber: string
+    trackingNumber?: string
+    shippingCarrier?: string
+    estimatedDelivery?: string
+    trackingUrl?: string
+    orderUrl: string
+    storeName: string
+    year: number
+  },
+  language = "en",
+  requestId?: string,
+): Promise<any> => {
+  const logger = createRequestLogger(requestId)
+  logger.info(`Sending order shipped email to: ${to}, order ID: ${data.orderId}`)
+
+  try {
+    // Load template
+    const template = await loadTemplate(EmailType.ORDER_SHIPPED, language)
+
+    // Compile template with data
+    const html = template.html({
+      ...data,
+      greeting: translateEmail("orderShipped.greeting", { firstName: data.firstName }, language),
+      message: translateEmail("orderShipped.message", { orderNumber: data.orderNumber }, language),
+      trackingInfo: translateEmail("orderShipped.trackingInfo", {}, language),
+      trackingNumber: translateEmail("orderShipped.trackingNumber", {}, language),
+      carrier: translateEmail("orderShipped.carrier", {}, language),
+      estimatedDelivery: translateEmail("orderShipped.estimatedDelivery", {}, language),
+      trackingInstructions: translateEmail("orderShipped.trackingInstructions", {}, language),
+      orderCta: translateEmail("orderShipped.orderCta", {}, language),
+      support: translateEmail("orderShipped.support", {}, language),
+    })
+
+    // Get subject from translations
+    const subject = translateEmail("orderShipped.subject", { orderNumber: data.orderNumber }, language)
+
+    // Queue email
+    return queueEmail(to, subject, html, {}, requestId)
+  } catch (error: any) {
+    logger.error(`Failed to send order shipped email: ${error.message}`)
+    throw error
+  }
+}
+
+/**
  * Send password reset email
  * @param to Recipient email
  * @param data Template data

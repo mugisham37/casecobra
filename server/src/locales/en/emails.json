@@ -52,10 +52,16 @@
   },
   "orderShipped": {
     "subject": "Your order has shipped - #{{orderNumber}}",
-    "greeting": "Hello {{name}},",
-    "body": "Great news! Your order #{{orderNumber}} has been shipped and is on its way.",
-    "cta": "Track Package",
-    "footer": "Tracking number: {{trackingNumber}}"
+    "greeting": "Hello {{firstName}},",
+    "message": "Great news! Your order #{{orderNumber}} has been shipped and is on its way.",
+    "trackingInfo": "Tracking Information",
+    "trackingNumber": "Tracking Number",
+    "carrier": "Shipping Carrier",
+    "estimatedDelivery": "Estimated Delivery",
+    "trackingInstructions": "You can track your package using the tracking number above or by clicking the tracking link.",
+    "orderCta": "View Order Details",
+    "support": "If you have any questions about your shipment, please don't hesitate to contact our customer support team.",
+    "footer": "Thank you for shopping with us!"
   },
   "orderDelivered": {
     "subject": "Your order has been delivered - #{{orderId}}",

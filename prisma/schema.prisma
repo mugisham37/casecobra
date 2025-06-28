@@ -188,6 +188,7 @@ model User {
   loyaltyReferralsGiven    LoyaltyReferral[] @relation("UserReferrals")
   loyaltyReferralReceived  LoyaltyReferral[] @relation("UserReferred")
   loyaltyRedemptions       LoyaltyRedemption[]
+  notifications     Notification[]
 
   @@map("users")
 }
@@ -1002,6 +1003,25 @@ model UserInvitation {
   invitee User? @relation("InvitedUser", fields: [invitedUserId], references: [id])
 
   @@map("user_invitations")
+}
+
+// Notification System
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("INFO")
+  data      Json     @default("{}")
+  isRead    Boolean  @default(false)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }
 
 // Application Settings

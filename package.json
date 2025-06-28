@@ -47,6 +47,8 @@
   "devDependencies": {
     "@commitlint/cli": "^18.4.3",
     "@commitlint/config-conventional": "^18.4.3",
+    "@types/json2csv": "^5.0.7",
+    "@types/pdfkit": "^0.14.0",
     "@types/pg": "^8.15.4",
     "@typescript-eslint/eslint-plugin": "^6.13.1",
     "@typescript-eslint/parser": "^6.13.1",
@@ -80,7 +82,10 @@
   "dependencies": {
     "@prisma/client": "^6.10.1",
     "@types/handlebars": "^4.0.40",
+    "exceljs": "^4.4.0",
     "handlebars": "^4.7.8",
+    "json2csv": "^6.0.0-alpha.2",
+    "pdfkit": "^0.17.1",
     "pg": "^8.16.2",
     "prisma": "^6.10.1"
   }

@@ -3,6 +3,7 @@ import prisma from '../database/client'
 import { createRequestLogger } from '../utils/logger'
 import { ApiError } from '../utils/api-error'
 import * as emailService from './email.service'
+import { sendOrderShippedEmail } from './email.service'
 
 /**
  * Send loyalty notification
@@ -259,11 +260,12 @@ export const sendOrderNotification = async (
           {
             firstName: user.firstName,
             orderId: orderData.orderId,
+            orderNumber: orderData.orderNumber,
             orderDate: orderData.orderDate,
             orderItems: orderData.orderItems,
             subtotal: orderData.subtotal,
-            tax: orderData.tax,
-            shipping: orderData.shipping,
+            taxAmount: orderData.taxAmount,
+            shippingAmount: orderData.shippingAmount,
             total: orderData.total,
             shippingAddress: orderData.shippingAddress,
             orderUrl: orderData.orderUrl,
@@ -276,12 +278,14 @@ export const sendOrderNotification = async (
         break
 
       case "order_shipped":
-        await emailService.sendOrderShippedEmail(
+        await sendOrderShippedEmail(
           user.email,
           {
             firstName: user.firstName,
             orderId: orderData.orderId,
+            orderNumber: orderData.orderNumber,
             trackingNumber: orderData.trackingNumber,
+            shippingCarrier: orderData.shippingCarrier,
             estimatedDelivery: orderData.estimatedDelivery,
             trackingUrl: orderData.trackingUrl,
             orderUrl: orderData.orderUrl,
